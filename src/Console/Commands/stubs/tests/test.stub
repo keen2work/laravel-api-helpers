@@ -1,0 +1,68 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
+
+class {{ class }} extends APIBaseTestCase
+{
+
+	use DatabaseTransactions;
+
+    /**
+     *
+     * {{ $description}}
+     *
+     * @return void
+     */
+    public function {{ $testName }}()
+    {
+        $data = $cookies = $files = $headers = $server = [];
+        $faker = \Faker\Factory::create('en_AU');
+        $content = null;
+
+		@if (isset($param_locations['header']))
+			// header params
+	        @foreach ($param_locations['header'] as $param)
+	            @switch ($param['name'])
+	                @case ('x-api-key')
+	                    $headers['x-api-key'] = $this->getApiKey();
+	                    @break
+	                @case ('x-access-token')
+	                    $headers['x-access-token'] = $this->getAccessToken();
+	                    @break
+	                @default
+	                    $headers['{{ $param['name'] }}'] = {!! \EMedia\Api\Domain\Postman\PostmanVar::postmanToFaker($param) !!};
+	            @endswitch
+	        @endforeach
+		@endif
+
+		@if (isset($param_locations['formData']))
+			// form params
+            @foreach ($param_locations['formData'] as $param)
+                $data['{{ $param['name'] }}'] = {!! \EMedia\Api\Domain\Postman\PostmanVar::postmanToFaker($param) !!};
+            @endforeach
+		@endif
+
+        @switch ($method)
+            @case ('get')
+                $response = $this->get('{{ $uri }}', $headers);
+                @break
+            @case('post')
+                $response = $this->post('{{ $uri }}', $data, $headers);
+                @break
+            @default
+                $server = $this->transformHeadersToServerVars($headers);
+				$cookies = $this->prepareCookiesForRequest();
+                $response = $this->call('{{ $method }}', '{{ $uri }}', $data, $cookies, $files, $server, $content);
+        @endswitch
+
+        $this->saveResponse($response->getContent(), '{{ $operationId }}', $response->getStatusCode());
+
+		$response->assertStatus(200);
+    }
+
+}
